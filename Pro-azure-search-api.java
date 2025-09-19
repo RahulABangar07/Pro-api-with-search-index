@@ -33,7 +33,8 @@ public class SearchController {
     }
 }
 
-@Service
+
+   @Service
 class SearchService {
 
     private final SearchAsyncClient searchAsyncClient;
@@ -51,10 +52,13 @@ class SearchService {
     }
 
     public Mono<ResponseEntity<SearchResponse>> search(String param1, String authHeader) {
-        // Azure Search query
-        SearchOptions options = new SearchOptions().setTop(1); // Fetch only 1 doc
+        // Exact match filter on param1Attribute field in index
+        SearchOptions options = new SearchOptions()
+                .setFilter(String.format("param1Attribute eq '%s'", param1))
+                .setTop(1);
 
-        SearchPagedFlux results = searchAsyncClient.search(param1, options);
+        // Empty string search text to only rely on filter
+        SearchPagedFlux results = searchAsyncClient.search("*", options);
 
         return results
                 .byPage()
@@ -72,26 +76,9 @@ class SearchService {
                     );
                     return Mono.just(ResponseEntity.ok(response));
                 })
-                .onErrorResume(ex -> {
-                    return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build());
-                });
+                .onErrorResume(ex ->
+                        Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build())
+                );
     }
 }
-
-class SearchResponse {
-    private String param1;
-    private String lookupValue;
-
-    public SearchResponse(String param1, String lookupValue) {
-        this.param1 = param1;
-        this.lookupValue = lookupValue;
-    }
-
-    public String getParam1() {
-        return param1;
-    }
-
-    public String getLookupValue() {
-        return lookupValue;
-    }
-}
+ 
